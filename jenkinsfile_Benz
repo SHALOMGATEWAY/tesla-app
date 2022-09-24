@@ -1,0 +1,29 @@
+node{
+	def MavenHome = tool name: 'Maven3.8.6'
+	stage('1CodeClone') {
+        git "https://github.com/SHALOMGATEWAY/tesla-app.git" 
+	}
+	stage('2Test&Build'){
+		sh "${MavenHome}/bin/mvn clean package"
+	}
+	stage('3CodeQuality'){
+		sh "${MavenHome}/bin/mvn sonar:sonar"
+	}
+	stage('4UploadArtifact'){
+		sh "${MavenHome}/bin/mvn deploy"
+	}
+	stage('5Deploy2UAT'){
+	    deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://35.183.76.2:8080/')], contextPath: null, war: 'target/*war'
+	}	
+		stage('6ApprovalGate'){
+		timeout(time: 7, unit: 'DAYS') {
+    	input 'Please review and approve'
+}
+	}
+	stage('7Deploy2prod'){
+	deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://35.183.76.2:8080/')], contextPath: null, war: 'target/*war'
+	}
+	stage('8EmailNotification'){
+	emailext body: 'Lolo1', recipientProviders: [contributor(), buildUser(), developers()], subject: 'Build', to: 'michaelodeyinde8@gmail.com'
+	}
+}
